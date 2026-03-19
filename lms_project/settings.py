@@ -107,9 +107,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Custom user model
 AUTH_USER_MODEL = 'users.User'
 
-# REST Framework settings
-REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-}
+# ==================== Stripe и dotenv ====================
+import os
+from dotenv import load_dotenv
+
+load_dotenv()  # загружает .env автоматически
+
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY')
+
+if not STRIPE_SECRET_KEY:
+    print("⚠️  STRIPE_SECRET_KEY не найден в .env файле!")
+    print("Создайте файл .env в корне проекта и добавьте строку:")
+    print("STRIPE_SECRET_KEY=sk_test_ваш_ключ")
+
+# ==================== drf-yasg (Swagger) ====================
+INSTALLED_APPS += ['drf_yasg']
