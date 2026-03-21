@@ -15,3 +15,5 @@ Django + DRF проект с курсами, уроками, авторизац�
 ```bash
 git clone https://github.com/ustimovivan113-dotcom/30.git
 cd 30
+
+- Документация API доступна по адресу /swagger/

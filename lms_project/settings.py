@@ -122,3 +122,34 @@ if not STRIPE_SECRET_KEY:
 
 # ==================== drf-yasg (Swagger) ====================
 INSTALLED_APPS += ['drf_yasg']
+
+# ==================== Celery + Celery Beat ====================
+# Redis (broker и backend результатов)
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+# Сериализаторы (json — самый безопасный и быстрый)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+# Часовой пояс — ОБЯЗАТЕЛЬНО совпадает с TIME_ZONE в проекте
+CELERY_TIMEZONE = 'Europe/Moscow'
+
+# Результаты задач храним максимум сутки
+CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24
+
+# Подключаем django-celery-beat (расписание хранится в базе данных)
+INSTALLED_APPS += ['django_celery_beat']
+
+# Импортируем crontab — ЭТО КЛЮЧЕВОЕ ИСПРАВЛЕНИЕ
+from celery.schedules import crontab
+
+# Расписание периодических задач
+CELERY_BEAT_SCHEDULE = {
+    'block-inactive-users-every-day': {
+        'task': 'lms.tasks.block_inactive_users',
+        'schedule': crontab(hour=3, minute=0),  # каждый день в 03:00 ночи
+        'args': (),
+    },
+}
