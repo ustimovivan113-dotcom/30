@@ -49,3 +49,15 @@ class CreatePaymentView(generics.CreateAPIView):
 
         serializer = self.get_serializer(payment)
         return Response(serializer.data, status=201)
+
+    from lms.tasks import send_course_update_email
+
+    class LessonRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+        queryset = Lesson.objects.all()
+        serializer_class = LessonSerializer
+
+        def perform_update(self, serializer):
+            lesson = serializer.save()
+            # После обновления урока — рассылаем уведомление подписчикам курса
+            course_id = lesson.course.id
+            send_course_update_email.delay(course_id)
