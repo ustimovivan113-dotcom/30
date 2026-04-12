@@ -1,8 +1,11 @@
-## Запуск проекта через Docker Compose
+## Деплой на продакшн-сервер
 
-### 1. Подготовка
+Проект автоматически деплоится на VPS при каждом push в ветку `develop`.
+
+### Ручной запуск на сервере (если нужно)
 ```bash
-# Скопируйте шаблон переменных окружения
-cp .env.example .env
-
-# Откройте .env и укажите свой STRIPE_SECRET_KEY
+cd /home/deploy/lms
+source venv/bin/activate
+python manage.py migrate
+python manage.py collectstatic --noinput
+sudo systemctl restart gunicorn
