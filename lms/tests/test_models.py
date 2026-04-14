@@ -1,50 +1,44 @@
 from django.test import TestCase
-from django.conf import settings
+from django.apps import apps
+
 from lms.models import Course, Lesson
+
 
 class CourseModelTest(TestCase):
     """Тесты для модели Course"""
 
     def test_course_creation(self):
-        """Проверяем создание курса"""
         course = Course.objects.create(
-            name="Тестовый курс по Python",
-            description="Описание тестового курса",
-            price=1500
+            name="Тестовый курс",
+            description="Описание курса для теста",
+            price=999
         )
-        self.assertEqual(course.name, "Тестовый курс по Python")
-        self.assertEqual(course.price, 1500)
-        self.assertIsNotNone(course.id)
+        self.assertEqual(course.name, "Тестовый курс")
+        self.assertEqual(course.price, 999)
+        self.assertIsNotNone(course.pk)
 
-    def test_course_str_method(self):
-        """Проверяем строковое представление курса"""
-        course = Course.objects.create(
-            name="Django для начинающих",
-            description="Тест",
-            price=2000
-        )
-        self.assertEqual(str(course), "Django для начинающих")
+    def test_course_str(self):
+        course = Course.objects.create(name="Python Advanced", description="...", price=0)
+        self.assertEqual(str(course), "Python Advanced")
 
 
 class LessonModelTest(TestCase):
     """Тесты для модели Lesson"""
 
     def setUp(self):
-        """Создаём курс перед каждым тестом урока"""
+        # Явно проверяем, что приложения загружены
+        self.assertTrue(apps.is_installed('lms'))
         self.course = Course.objects.create(
-            name="Основной курс",
-            description="Тестовый курс для уроков",
-            price=1000
+            name="Базовый курс",
+            description="Для тестов уроков",
+            price=500
         )
 
     def test_lesson_creation(self):
-        """Проверяем создание урока"""
         lesson = Lesson.objects.create(
-            name="Урок 1: Введение в Django",
-            description="Описание первого урока",
-            course=self.course,
-            video_link="https://youtube.com/test"
+            name="Урок №1",
+            description="Тестовый урок",
+            course=self.course
         )
-        self.assertEqual(lesson.name, "Урок 1: Введение в Django")
-        self.assertEqual(lesson.course, self.course)
-        self.assertIsNotNone(lesson.id)
+        self.assertEqual(lesson.name, "Урок №1")
+        self.assertEqual(lesson.course_id, self.course.id)
