@@ -1,16 +1,19 @@
-name: Django CI/CD
+name: Django CI/CD — Tests + Deploy
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ develop, main, homework/34-deploy-github-actions ]
+  pull_request:
+    branches: [ develop, main ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -20,27 +23,31 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run Django tests
         run: |
-          python manage.py test
+          python manage.py test --verbosity=2
 
   deploy:
     needs: test
+    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
     steps:
-      - name: Deploy to VPS
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /home/deploy/lms
-            git pull origin develop
+            cd /home/deploy/lms_project
+            git pull origin ${{ github.ref_name }}
             source venv/bin/activate
             pip install -r requirements.txt
-            python manage.py migrate
-            python manage.py collectstatic --noinput
+            python manage.py migrate --noinput
+            python manage.py collectstatic --noinput --clear
             sudo systemctl restart gunicorn
-            echo "✅ Деплой завершён успешно!"
+            sudo systemctl restart nginx
+            echo "✅ Деплой успешно завершён на сервере!"
