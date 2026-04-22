@@ -1,53 +1,65 @@
-name: Django CI/CD — Tests + Deploy
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ develop, main, homework/34-deploy-github-actions ]
+    branches: [ "homework/34-deploy-github-actions", "develop", "master" ]
   pull_request:
-    branches: [ develop, main ]
+    branches: [ "develop", "master" ]
 
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Django tests
+      - name: Run tests
         run: |
-          python manage.py test --verbosity=2
+          python manage.py test
+        env:
+          SECRET_KEY: "test_secret_key"
+          DEBUG: "True"
+          DB_HOST: "localhost" # Для тестов используем sqlite по умолчанию или мок
+          REDIS_HOST: "localhost"
 
   deploy:
-    needs: test
-    if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    needs: tests
+    if: github.ref == 'refs/heads/homework/34-deploy-github-actions' # Деплоим только из этой ветки
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Copy files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "."
+          target: "~/lms_project_docker"
+
+      - name: Executing remote ssh commands to deploy
+        uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /home/deploy/lms_project
-            git pull origin ${{ github.ref_name }}
-            source venv/bin/activate
-            pip install -r requirements.txt
-            python manage.py migrate --noinput
-            python manage.py collectstatic --noinput --clear
-            sudo systemctl restart gunicorn
-            sudo systemctl restart nginx
-            echo "✅ Деплой успешно завершён на сервере!"
+            cd ~/lms_project_docker
+            sudo docker compose down
+            sudo docker compose up -d --build
+            sudo docker compose exec -T backend python manage.py migrate
+            sudo docker compose exec -T backend python manage.py collectstatic --noinput
