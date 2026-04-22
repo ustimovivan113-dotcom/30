@@ -18,34 +18,57 @@ jobs:
       - name: Install linting tools
         run: pip install flake8
       - name: Lint with flake8
-        # Проверяем только синтаксические ошибки (самое важное)
         run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
   tests:
     needs: linting
     runs-on: ubuntu-latest
+
+    # Добавляем сервисы для тестов
     services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: lms_db
+          POSTGRES_USER: lms_user
+          POSTGRES_PASSWORD: lms_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
         image: redis:7-alpine
         ports:
           - 6379:6379
+
     steps:
       - uses: actions/checkout@v3
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: Run Django tests
         run: python manage.py test
         env:
+          # Эти переменные должны совпадать с сервисом выше
           SECRET_KEY: "test_secret_key"
           DEBUG: "True"
-          DB_HOST: "localhost"
-          REDIS_HOST: "localhost"
+          POSTGRES_DB: lms_db
+          POSTGRES_USER: lms_user
+          POSTGRES_PASSWORD: lms_password
+          DB_HOST: localhost
+          DB_PORT: 5432
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
 
   docker_build_check:
     needs: tests
