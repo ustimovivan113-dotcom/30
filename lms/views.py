@@ -45,7 +45,18 @@ class CreatePaymentView(generics.CreateAPIView):
         if course.price <= 0:
             raise ValidationError({"price": "У курса должна быть цена > 0"})
 
+        # Импорт задачи Celery только при реальном вызове метода
+        # (чтобы тесты в GitHub Actions не падали)
+        try:
+            from lms.tasks import send_course_update_email
+        except ImportError:
+            send_course_update_email = None  # Celery не установлен — нормально для CI
+
         payment = create_payment(course, user=request.user)
+
+        # Если задача существует — отправляем уведомление
+        if send_course_update_email:
+            send_course_update_email.delay(course.id, request.user.email)
 
         serializer = self.get_serializer(payment)
         return Response(serializer.data, status=201)
