@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: LMS CI/CD Pipeline
 
 on:
   push:
@@ -7,7 +7,22 @@ on:
     branches: [ "develop", "master" ]
 
 jobs:
+  linting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install linting tools
+        run: pip install flake8
+      - name: Lint with flake8
+        # Проверяем только синтаксические ошибки (самое важное)
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
   tests:
+    needs: linting
     runs-on: ubuntu-latest
     services:
       redis:
@@ -20,25 +35,30 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Run tests
-        run: |
-          python manage.py test
+      - name: Run Django tests
+        run: python manage.py test
         env:
           SECRET_KEY: "test_secret_key"
           DEBUG: "True"
-          DB_HOST: "localhost" # Для тестов используем sqlite по умолчанию или мок
+          DB_HOST: "localhost"
           REDIS_HOST: "localhost"
 
-  deploy:
-    runs-on: ubuntu-latest
+  docker_build_check:
     needs: tests
-    if: github.ref == 'refs/heads/homework/34-deploy-github-actions' # Деплоим только из этой ветки
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker images (dry run)
+        run: docker compose build
+
+  deploy:
+    needs: docker_build_check
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/homework/34-deploy-github-actions'
     steps:
       - uses: actions/checkout@v3
 

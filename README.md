@@ -1,26 +1,30 @@
-## 🚀 Деплой и CI/CD
+# LMS Project (Containerized)
 
-### GitHub Actions Workflow
-Проект использует GitHub Actions для автоматического:
-- Запуска тестов при каждом push/pull request
-- Автоматического деплоя на удалённый сервер (только из веток `develop` и `main`)
+Проект системы управления обучением (LMS), упакованный в Docker с настроенным CI/CD.
 
-Workflow файл: `.github/workflows/deploy.yml`
+## Стек технологий
+- **Backend:** Django, DRF
+- **Database:** PostgreSQL
+- **Task Queue:** Celery, Redis
+- **Web Server:** Nginx
+- **Containerization:** Docker, Docker Compose
+- **CI/CD:** GitHub Actions
 
-### Настройка сервера (для проверяющего)
+## Адрес проекта (Deployment)
+Приложение доступно по адресу: [http://111.88.157.110](http://111.88.157.110)
 
-1. На сервере (Ubuntu 22.04/24.04) должен быть создан пользователь `deploy`
-2. Установлены: `nginx`, `gunicorn`, `git`
-3. Настроен systemd-сервис `gunicorn.service`
-4. Настроен сайт в nginx
-5. Добавлены Secrets в GitHub:
-   - `VPS_HOST` — IP адрес сервера
-   - `VPS_USER` — `deploy`
-   - `VPS_SSH_KEY` — приватный SSH ключ
+## Как запустить локально
 
-### Как запустить деплой
-Просто сделайте push в ветку `develop` или `main` — после успешных тестов проект автоматически развернётся на сервере.
-
-### Локальный запуск
-```bash
-python manage.py runserver
+1. Клонируйте репозиторий.
+2. Создайте файл `.env` в корне проекта и заполните его по примеру:
+   ```env
+   DEBUG=True
+   SECRET_KEY=your_key
+   POSTGRES_DB=lms_db
+   POSTGRES_USER=lms_user
+   POSTGRES_PASSWORD=lms_password
+   DB_HOST=db
+   DB_PORT=5432
+   REDIS_HOST=redis
+   REDIS_PORT=6379
+   STRIPE_SECRET_KEY=sk_test_...
